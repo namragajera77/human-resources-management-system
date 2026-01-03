@@ -56,8 +56,10 @@ function Leave() {
   });
 
   useEffect(() => {
-    fetchMyLeaves();
-    fetchBalance();
+    if (user?.role !== 'Admin') {
+      fetchMyLeaves();
+      fetchBalance();
+    }
     if (isAdminOrHR) {
       fetchAllLeaves();
       fetchPendingLeaves();
@@ -149,11 +151,14 @@ function Leave() {
       });
       fetchMyLeaves();
       fetchBalance();
+      if (isAdminOrHR) {
+        fetchAllLeaves();
+        fetchPendingLeaves();
+      }
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to apply for leave');
     }
-  }; // Refresh all leaves
-      fetchPendingLeaves(); // Refresh pending leaves
+  };
 
   const handleReview = async (id, status, comments) => {
     setError('');
@@ -164,6 +169,11 @@ function Leave() {
       setSuccess(`Leave ${status.toLowerCase()} successfully!`);
       setReviewDialog(null);
       fetchAllLeaves();
+      fetchPendingLeaves();
+      // Only fetch balance if user is not Admin (Admin doesn't have employee record)
+      if (user?.role !== 'Admin') {
+        fetchBalance();
+      }
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to review leave');
     }

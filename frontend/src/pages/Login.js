@@ -25,7 +25,11 @@ function Login() {
     setLoading(true);
 
     try {
-      const user = await login({ loginId, password });
+      // Trim whitespace from credentials
+      const user = await login({ 
+        loginId: loginId.trim(), 
+        password: password 
+      });
       
       if (user.isFirstLogin) {
         navigate('/change-password');

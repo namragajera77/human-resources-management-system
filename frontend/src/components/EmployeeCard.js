@@ -6,16 +6,20 @@ import {
   Typography,
   Box,
   Chip,
-  IconButton,
-  Popover,
   Button,
-  Alert
+  Popover,
+  Alert,
+  alpha
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import FlightIcon from '@mui/icons-material/Flight';
-import CancelIcon from '@mui/icons-material/Cancel';
-import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
+import {
+  FiberManualRecord,
+  FlightTakeoff,
+  ArrowForward,
+  Work,
+  CorporateFare,
+  AccessTime
+} from '@mui/icons-material';
 import { attendanceAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { emitAttendanceUpdate } from '../utils/attendanceEvents';
@@ -31,44 +35,38 @@ function EmployeeCard({ employee, onAttendanceUpdate }) {
 
   const isOwnCard = user?.employee?._id === employee._id;
 
-  const getStatusIcon = () => {
-    switch (employee.attendanceStatus) {
-      case 'Present':
-        return <FiberManualRecordIcon sx={{ color: '#4caf50', fontSize: 20 }} />;
-      case 'OnLeave':
-        return <FlightIcon sx={{ color: '#2196f3', fontSize: 20 }} />;
-      case 'Absent':
-        return <FiberManualRecordIcon sx={{ color: '#ff9800', fontSize: 20 }} />;
-      default:
-        return <FiberManualRecordIcon sx={{ color: '#f44336', fontSize: 20 }} />;
-    }
+  const getStatusInfo = () => {
+    const status = employee.attendanceStatus || 'NotCheckedIn';
+    const info = {
+      Present: { 
+        color: '#4caf50', 
+        icon: <FiberManualRecord />, 
+        label: 'Present', 
+        bgColor: '#e8f5e9' 
+      },
+      OnLeave: { 
+        color: '#2196f3', 
+        icon: <FlightTakeoff />, 
+        label: 'On Leave', 
+        bgColor: '#e3f2fd' 
+      },
+      Absent: { 
+        color: '#ff9800', 
+        icon: <FiberManualRecord />, 
+        label: 'Absent', 
+        bgColor: '#fff3e0' 
+      },
+      NotCheckedIn: { 
+        color: '#f44336', 
+        icon: <FiberManualRecord />, 
+        label: 'Not Checked In', 
+        bgColor: '#ffebee' 
+      }
+    };
+    return info[status] || info.NotCheckedIn;
   };
 
-  const getStatusColor = () => {
-    switch (employee.attendanceStatus) {
-      case 'Present':
-        return 'success';
-      case 'OnLeave':
-        return 'info';
-      case 'Absent':
-        return 'warning';
-      default:
-        return 'error';
-    }
-  };
-
-  const getStatusText = () => {
-    switch (employee.attendanceStatus) {
-      case 'Present':
-        return 'Present';
-      case 'OnLeave':
-        return 'On Leave';
-      case 'Absent':
-        return 'Absent';
-      default:
-        return 'Not Checked In';
-    }
-  };
+  const statusInfo = getStatusInfo();
 
   const handleStatusClick = (event) => {
     if (isOwnCard) {
@@ -80,6 +78,11 @@ function EmployeeCard({ employee, onAttendanceUpdate }) {
   const handleClose = () => {
     setAnchorEl(null);
     setError('');
+  };
+
+  const handleViewProfile = (event) => {
+    event.stopPropagation();
+    navigate(`/profile/${employee._id}`);
   };
 
   const handleCheckIn = async () => {
@@ -130,73 +133,189 @@ function EmployeeCard({ employee, onAttendanceUpdate }) {
     <>
       <Card
         sx={{
-          cursor: 'pointer',
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          borderRadius: '12px',
+          overflow: 'visible',
           position: 'relative',
-          transition: 'transform 0.2s, box-shadow 0.2s',
+          border: '1px solid #e0e0e0',
+          backgroundColor: '#ffffff',
+          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
           '&:hover': {
-            transform: 'translateY(-4px)',
-            boxShadow: 6
+            transform: 'translateY(-6px)',
+            boxShadow: '0 12px 24px rgba(0, 0, 0, 0.08)',
+            borderColor: alpha('#714B67', 0.3),
+            '& .view-profile-btn': {
+              opacity: 1,
+              transform: 'translateY(0)'
+            }
           }
         }}
-        onClick={() => navigate(`/profile/${employee._id}`)}
       >
-        {/* Status Indicator at Top-Right */}
+        {/* Status Indicator */}
         <Box
           sx={{
             position: 'absolute',
-            top: 12,
-            right: 12,
-            zIndex: 1
+            top: -10,
+            right: 16,
+            zIndex: 2
           }}
         >
-          <IconButton
+          <Chip
+            icon={statusInfo.icon}
+            label={statusInfo.label}
             size="small"
-            onClick={handleStatusClick}
             sx={{
-              bgcolor: 'white',
-              boxShadow: 2,
-              '&:hover': {
-                bgcolor: 'white',
-                transform: 'scale(1.1)'
-              }
+              backgroundColor: statusInfo.bgColor,
+              color: statusInfo.color,
+              border: `1px solid ${alpha(statusInfo.color, 0.3)}`,
+              fontWeight: 500,
+              fontSize: '12px',
+              height: '28px',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+              cursor: isOwnCard ? 'pointer' : 'default',
+              '& .MuiChip-icon': {
+                color: statusInfo.color,
+                fontSize: '16px'
+              },
+              '&:hover': isOwnCard ? {
+                backgroundColor: alpha(statusInfo.color, 0.1),
+                transform: 'scale(1.05)'
+              } : {}
             }}
-          >
-            {getStatusIcon()}
-          </IconButton>
+            onClick={handleStatusClick}
+          />
         </Box>
 
-        <CardContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        {/* Card Content */}
+        <CardContent sx={{ 
+          p: 3, 
+          pt: 4, 
+          flexGrow: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center'
+        }}>
+          {/* Avatar */}
+          <Box
+            sx={{
+              position: 'relative',
+              mb: 3
+            }}
+          >
             <Avatar
               src={employee.profilePicture ? `${API_BASE_URL}${employee.profilePicture}` : ''}
-              sx={{ width: 80, height: 80, mb: 2, bgcolor: 'primary.main' }}
+              sx={{ 
+                width: 88, 
+                height: 88,
+                backgroundColor: '#714B67',
+                fontSize: '28px',
+                fontWeight: 600,
+                border: '4px solid #ffffff',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.08)'
+              }}
             >
               {employee.firstName?.charAt(0)}{employee.lastName?.charAt(0)}
             </Avatar>
-            
-            <Typography variant="h6" fontWeight="bold" gutterBottom>
-              {employee.firstName} {employee.lastName}
-            </Typography>
-            
-            <Typography variant="body2" color="textSecondary" gutterBottom>
+          </Box>
+
+          {/* Employee Name */}
+          <Typography
+            variant="h6"
+            fontWeight="600"
+            color="#2c3e50"
+            align="center"
+            gutterBottom
+            sx={{
+              lineHeight: 1.3,
+              fontSize: '18px',
+              mb: 1
+            }}
+          >
+            {employee.firstName} {employee.lastName}
+          </Typography>
+
+          {/* Position */}
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+            <Work sx={{ fontSize: 16, color: '#666666', mr: 1, opacity: 0.8 }} />
+            <Typography
+              variant="body2"
+              color="#666666"
+              sx={{
+                fontSize: '14px',
+                fontWeight: 500
+              }}
+            >
               {employee.position || 'Employee'}
             </Typography>
-            
-            <Typography variant="body2" color="textSecondary" gutterBottom>
-              {employee.department || 'N/A'}
+          </Box>
+
+          {/* Department */}
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+            <CorporateFare sx={{ fontSize: 16, color: '#666666', mr: 1, opacity: 0.8 }} />
+            <Typography
+              variant="body2"
+              color="#666666"
+              sx={{
+                fontSize: '14px'
+              }}
+            >
+              {employee.department || 'Department'}
             </Typography>
-            
-            <Chip
-              label={getStatusText()}
-              color={getStatusColor()}
-              size="small"
-              sx={{ mt: 1 }}
-            />
+          </Box>
+
+          {/* Check-in time */}
+          {employee.todayAttendance?.checkInTime && (
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              backgroundColor: '#f8f9fa',
+              borderRadius: '6px',
+              p: 1,
+              mt: 'auto',
+              width: '100%',
+              justifyContent: 'center'
+            }}>
+              <AccessTime sx={{ fontSize: 14, color: '#666666', mr: 1, opacity: 0.8 }} />
+              <Typography variant="caption" color="#666666">
+                Checked in: {getTimeSinceCheckIn()}
+              </Typography>
+            </Box>
+          )}
+
+          {/* View Profile Button */}
+          <Box sx={{ mt: 'auto', pt: 2, width: '100%' }}>
+            <Button
+              fullWidth
+              variant="outlined"
+              endIcon={<ArrowForward sx={{ fontSize: 16 }} />}
+              onClick={handleViewProfile}
+              className="view-profile-btn"
+              sx={{
+                opacity: 0,
+                transform: 'translateY(10px)',
+                transition: 'all 0.3s ease',
+                borderColor: '#714B67',
+                color: '#714B67',
+                textTransform: 'none',
+                fontSize: '14px',
+                fontWeight: 500,
+                borderRadius: '8px',
+                py: 1,
+                '&:hover': {
+                  backgroundColor: alpha('#714B67', 0.04),
+                  borderColor: '#5d3d54'
+                }
+              }}
+            >
+              View Profile
+            </Button>
           </Box>
         </CardContent>
       </Card>
 
-      {/* Check-In/Check-Out Popover */}
+      {/* Attendance Popover */}
       <Popover
         open={open}
         anchorEl={anchorEl}
@@ -209,53 +328,116 @@ function EmployeeCard({ employee, onAttendanceUpdate }) {
           vertical: 'top',
           horizontal: 'right',
         }}
+        PaperProps={{
+          sx: {
+            borderRadius: '12px',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+            minWidth: '280px',
+            border: '1px solid #e0e0e0',
+            overflow: 'visible',
+            '&:before': {
+              content: '""',
+              position: 'absolute',
+              top: '-8px',
+              right: '20px',
+              transform: 'rotate(45deg)',
+              width: '16px',
+              height: '16px',
+              backgroundColor: '#ffffff',
+              borderTop: '1px solid #e0e0e0',
+              borderLeft: '1px solid #e0e0e0'
+            }
+          }
+        }}
       >
-        <Box sx={{ p: 2, minWidth: 250 }}>
-          <Typography variant="h6" gutterBottom>
-            Attendance
+        <Box sx={{ p: 3 }}>
+          <Typography variant="h6" fontWeight="600" color="#2c3e50" gutterBottom sx={{ fontSize: '16px' }}>
+            Update Attendance
           </Typography>
 
           {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
+            <Alert 
+              severity="error" 
+              sx={{ 
+                mb: 2, 
+                borderRadius: '8px',
+                fontSize: '13px'
+              }}
+            >
               {error}
             </Alert>
           )}
 
-          {employee.attendanceStatus === 'OnLeave' ? (
-            <Typography variant="body2" color="textSecondary">
-              You are on approved leave today
+          {statusInfo.label === 'On Leave' ? (
+            <Typography variant="body2" color="#666666" sx={{ mb: 2, lineHeight: 1.6 }}>
+              You are on approved leave today.
             </Typography>
-          ) : employee.attendanceStatus === 'Present' ? (
+          ) : statusInfo.label === 'Present' ? (
             <Box>
-              <Typography variant="body2" color="textSecondary" gutterBottom>
-                Checked in at: {getTimeSinceCheckIn()}
-              </Typography>
+              <Box sx={{ 
+                backgroundColor: '#f8f9fa', 
+                borderRadius: '8px', 
+                p: 2, 
+                mb: 3 
+              }}>
+                <Typography variant="caption" color="#666666" sx={{ mb: 0.5, display: 'block' }}>
+                  Checked in at
+                </Typography>
+                <Typography variant="h6" fontWeight="600" color="#2c3e50" sx={{ fontSize: '20px' }}>
+                  {getTimeSinceCheckIn()}
+                </Typography>
+              </Box>
               {!employee.todayAttendance?.checkOutTime ? (
                 <Button
                   variant="contained"
-                  color="secondary"
                   fullWidth
                   onClick={handleCheckOut}
                   disabled={loading}
-                  sx={{ mt: 1 }}
+                  sx={{
+                    backgroundColor: '#714B67',
+                    color: '#ffffff',
+                    textTransform: 'none',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    py: 1.5,
+                    boxShadow: 'none',
+                    '&:hover': {
+                      backgroundColor: '#5d3d54',
+                      boxShadow: 'none'
+                    }
+                  }}
                 >
-                  Check Out
+                  {loading ? 'Processing...' : 'Check Out'}
                 </Button>
               ) : (
-                <Typography variant="body2" color="success.main">
-                  ✓ Already checked out for today
-                </Typography>
+                <Alert severity="info" sx={{ borderRadius: '8px' }}>
+                  Already checked out for today
+                </Alert>
               )}
             </Box>
           ) : (
             <Button
               variant="contained"
-              color="primary"
               fullWidth
               onClick={handleCheckIn}
               disabled={loading}
+              sx={{
+                backgroundColor: '#714B67',
+                color: '#ffffff',
+                textTransform: 'none',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: 500,
+                py: 1.5,
+                boxShadow: 'none',
+                '&:hover': {
+                  backgroundColor: '#5d3d54',
+                  boxShadow: 'none'
+                }
+              }}
             >
-              Check In
+              {loading ? 'Checking In...' : 'Check In Now'}
             </Button>
           )}
         </Box>
