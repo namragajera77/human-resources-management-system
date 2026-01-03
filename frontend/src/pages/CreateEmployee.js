@@ -11,8 +11,11 @@ import {
   MenuItem,
   Select,
   FormControl,
-  InputLabel
+  InputLabel,
+  IconButton,
+  Snackbar
 } from '@mui/material';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import { authAPI } from '../services/api';
@@ -22,6 +25,7 @@ function CreateEmployee() {
   const [success, setSuccess] = useState('');
   const [credentials, setCredentials] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [copyMessage, setCopyMessage] = useState('');
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
@@ -51,8 +55,20 @@ function CreateEmployee() {
     }
   });
 
+  const handleCopy = (text, label) => {
+    navigator.clipboard.writeText(text);
+    setCopyMessage(`${label} copied to clipboard!`);
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
+    
+    // Clear credentials when user starts entering new data
+    if (credentials) {
+      setCredentials(null);
+      setSuccess('');
+    }
+    
     if (name.includes('.')) {
       const [parent, child] = name.split('.');
       setFormData({
@@ -71,6 +87,7 @@ function CreateEmployee() {
     e.preventDefault();
     setError('');
     setSuccess('');
+    setCredentials(null); // Clear previous credentials
     setLoading(true);
 
     try {
@@ -78,7 +95,7 @@ function CreateEmployee() {
       setCredentials(response.data.credentials);
       setSuccess('Employee created successfully!');
       
-      // Reset form after 3 seconds
+      // Reset form after 30 seconds
       setTimeout(() => {
         setFormData({
           firstName: '',
@@ -95,7 +112,7 @@ function CreateEmployee() {
           bankDetails: { accountNumber: '', bankName: '', ifscCode: '', pan: '', uan: '' }
         });
         setCredentials(null);
-      }, 5000);
+      }, 30000);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to create employee');
     } finally {
@@ -116,13 +133,55 @@ function CreateEmployee() {
         {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
         
         {credentials && (
-          <Alert severity="info" sx={{ mb: 2 }}>
-            <Typography variant="body1" fontWeight="bold">Generated Credentials:</Typography>
-            <Typography variant="body2">Login ID: {credentials.loginId}</Typography>
-            <Typography variant="body2">Temporary Password: {credentials.tempPassword}</Typography>
-            <Typography variant="body2" color="error" sx={{ mt: 1 }}>
-              ⚠️ Please save these credentials and share with the employee securely!
+          <Alert 
+            severity="success" 
+            sx={{ 
+              mb: 2, 
+              p: 3,
+              border: '2px solid #4caf50',
+              '& .MuiAlert-message': { width: '100%' }
+            }}
+          >
+            <Typography variant="h6" fontWeight="bold" gutterBottom>
+              ✅ Employee Created Successfully!
             </Typography>
+            <Typography variant="body1" fontWeight="bold" sx={{ mt: 2, mb: 1 }}>
+              Generated Credentials:
+            </Typography>
+            
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, bgcolor: '#f5f5f5', p: 1.5, borderRadius: 1 }}>
+              <Box sx={{ flex: 1 }}>
+                <Typography variant="caption" color="text.secondary">Login ID</Typography>
+                <Typography variant="h6" fontWeight="bold">{credentials.loginId}</Typography>
+              </Box>
+              <IconButton 
+                onClick={() => handleCopy(credentials.loginId, 'Login ID')} 
+                color="primary"
+                size="small"
+              >
+                <ContentCopyIcon />
+              </IconButton>
+            </Box>
+
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, bgcolor: '#f5f5f5', p: 1.5, borderRadius: 1 }}>
+              <Box sx={{ flex: 1 }}>
+                <Typography variant="caption" color="text.secondary">Temporary Password</Typography>
+                <Typography variant="h6" fontWeight="bold">{credentials.tempPassword}</Typography>
+              </Box>
+              <IconButton 
+                onClick={() => handleCopy(credentials.tempPassword, 'Password')} 
+                color="primary"
+                size="small"
+              >
+                <ContentCopyIcon />
+              </IconButton>
+            </Box>
+
+            <Alert severity="warning" sx={{ mt: 2 }}>
+              <Typography variant="body2" fontWeight="bold">
+                ⚠️ Important: These credentials will disappear in 30 seconds. Please copy and save them securely!
+              </Typography>
+            </Alert>
           </Alert>
         )}
 
@@ -369,6 +428,14 @@ function CreateEmployee() {
           </form>
         </Paper>
       </Container>
+
+      <Snackbar
+        open={!!copyMessage}
+        autoHideDuration={2000}
+        onClose={() => setCopyMessage('')}
+        message={copyMessage}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      />
     </Box>
   );
 }
